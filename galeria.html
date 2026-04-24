@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Galeria de Fotos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0b;
+      --surface: #161613;
+      --gold: #c9a84c;
+      --gold-muted: #8a6e2f;
+      --text: #e8e0d0;
+      --text-muted: #7a7060;
+      --overlay: rgba(13,13,11,0.72);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Grain overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.35;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 4rem 5vw 2.5rem;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      border-bottom: 1px solid #2a2820;
+      position: relative;
+    }
+
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 5vw;
+      width: 80px; height: 1px;
+      background: var(--gold);
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .brand-label {
+      font-size: 0.7rem;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-family: 'Bebas Neue', sans-serif;
+      font-weight: 400;
+    }
+
+    .brand h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.8rem, 6vw, 5rem);
+      line-height: 0.9;
+      letter-spacing: 0.06em;
+      color: var(--text);
+    }
+
+    .header-meta {
+      text-align: right;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-style: italic;
+      line-height: 1.8;
+    }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      padding: 1.6rem 5vw;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .filter-bar span {
+      font-size: 0.7rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-right: 0.5rem;
+    }
+
+    .tag {
+      padding: 0.3rem 0.9rem;
+      border: 1px solid #2a2820;
+      border-radius: 0;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.12em;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .tag:hover, .tag.active {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* ── Masonry Grid ── */
+    .gallery-wrapper {
+      padding: 1.5rem 5vw 6rem;
+    }
+
+    .gallery {
+      columns: 3;
+      column-gap: 1rem;
+    }
+
+    @media (max-width: 900px)  { .gallery { columns: 2; } }
+    @media (max-width: 520px)  { .gallery { columns: 1; } }
+
+    .photo-card {
+      break-inside: avoid;
+      margin-bottom: 1rem;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(22px);
+      animation: fadeUp 0.55s ease forwards;
+    }
+
+    .photo-card:nth-child(1) { animation-delay: 0.05s; }
+    .photo-card:nth-child(2) { animation-delay: 0.12s; }
+    .photo-card:nth-child(3) { animation-delay: 0.18s; }
+    .photo-card:nth-child(4) { animation-delay: 0.24s; }
+    .photo-card:nth-child(5) { animation-delay: 0.30s; }
+    .photo-card:nth-child(6) { animation-delay: 0.36s; }
+    .photo-card:nth-child(7) { animation-delay: 0.42s; }
+    .photo-card:nth-child(8) { animation-delay: 0.48s; }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .photo-card img {
+      display: block;
+      width: 100%;
+      height: auto;
+      object-fit: cover;
+      transition: transform 0.55s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      filter: grayscale(18%) brightness(0.9);
+    }
+
+    .photo-card:hover img {
+      transform: scale(1.04);
+      filter: grayscale(0%) brightness(1);
+    }
+
+    .card-overlay {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to top, rgba(13,13,11,0.82) 0%, transparent 55%);
+      opacity: 0;
+      transition: opacity 0.35s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 1.2rem 1rem 1rem;
+    }
+
+    .photo-card:hover .card-overlay { opacity: 1; }
+
+    .card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1rem;
+      font-weight: 300;
+      color: #fff;
+      letter-spacing: 0.06em;
+      transform: translateY(6px);
+      transition: transform 0.35s ease 0.05s;
+    }
+
+    .card-meta {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-top: 0.2rem;
+      transform: translateY(6px);
+      transition: transform 0.35s ease 0.1s;
+    }
+
+    .photo-card:hover .card-title,
+    .photo-card:hover .card-meta { transform: translateY(0); }
+
+    /* Gold corner accent */
+    .photo-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 24px; height: 24px;
+      border-top: 2px solid var(--gold);
+      border-left: 2px solid var(--gold);
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 2;
+    }
+
+    .photo-card:hover::before { opacity: 1; }
+
+    /* ── Lightbox ── */
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,10,9,0.96);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      padding: 2rem;
+    }
+
+    .lightbox.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .lightbox-inner {
+      position: relative;
+      max-width: 900px;
+      width: 100%;
+      transform: scale(0.93);
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .lightbox.open .lightbox-inner { transform: scale(1); }
+
+    .lightbox-inner img {
+      width: 100%;
+      max-height: 80vh;
+      object-fit: contain;
+      display: block;
+      border: 1px solid #2a2820;
+    }
+
+    .lb-caption {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .lb-title {
+      font-size: 1.2rem;
+      font-weight: 300;
+      font-style: italic;
+      color: var(--text);
+    }
+
+    .lb-meta {
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .lb-close {
+      position: absolute;
+      top: -2.4rem; right: 0;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.6rem;
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.2s;
+    }
+
+    .lb-close:hover { color: var(--gold); }
+
+    .lb-nav {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: 1px solid #2a2820;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      width: 2.8rem; height: 2.8rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .lb-nav:hover { border-color: var(--gold); color: var(--gold); }
+    .lb-nav.prev { right: calc(100% + 1rem); }
+    .lb-nav.next { left: calc(100% + 1rem); }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid #1e1d18;
+      padding: 2rem 5vw;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+    }
+
+    footer a {
+      color: var(--gold-muted);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    footer a:hover { color: var(--gold); }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <span class="brand-label">Portfolio Visual</span>
+      <h1>Galeria</h1>
+    </div>
+    <div class="header-meta">
+      8 fotografias<br/>
+      Coleção 2024
+    </div>
+  </header>
+
+  <!-- Filter bar -->
+  <div class="filter-bar">
+    <span>Ver:</span>
+    <button class="tag active">Todas</button>
+    <button class="tag">Natureza</button>
+    <button class="tag">Urbano</button>
+    <button class="tag">Retrato</button>
+  </div>
+
+  <!-- Gallery -->
+  <div class="gallery-wrapper">
+    <div class="gallery" id="gallery">
+
+      <div class="photo-card" data-index="0" data-title="Névoa da Manhã" data-meta="Natureza">
+        <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=700&auto=format&fit=crop" alt="Névoa da Manhã" />
+        <div class="card-overlay">
+          <div class="card-title">Névoa da Manhã</div>
+          <div class="card-meta">Natureza</div>
+        </div>
+      </div>
+
+      <div class="photo-card" data-index="1" data-title="Luz Urbana" data-meta="Urbano">
+        <img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=700&auto=format&fit=crop" alt="Luz Urbana" />
+        <div class="card-overlay">
+          <div class="card-title">Luz Urbana</div>
+          <div class="card-meta">Urbano</div>
+        </div>
+      </div>
+
+      <div class="photo-card" data-index="2" data-title="Flores Silvestres" data-meta="Natureza">
+        <img src="https://images.unsplash.com/photo-1490750967868-88df5691b764?w=700&auto=format&fit=crop" alt="Flores Silvestres" />
+        <div class="card-overlay">
+          <div class="card-title">Flores Silvestres</div>
+          <div class="card-meta">Natureza</div>
+        </div>
+      </div>
+
+      <div class="photo-card" data-index="3" data-title="Arquitetura" data-meta="Urbano">
+        <img src="https://images.unsplash.com/photo-1486325212027-8081e485255e?w=700&auto=format&fit=crop" alt="Arquitetura" />
+        <div class="card-overlay">
+          <div class="card-title">Arquitetura</div>
+          <div class="card-meta">Urbano</div>
+        </div>
+      </div>
+
+      <div class="photo-card" data-index="4" data-title="Olhar Distante" data-meta="Retrato">
+        <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=700&auto=format&fit=crop" alt="Olhar Distante" />
+        <div class="card-overlay">
+          <div class="card-title">Olhar Distante</div>
+          <div class="card-meta">Retrato</div>
+        </div>
+      </div>
+
+      <div class="photo-card" data-index="5" data-title="Montanhas ao Entardecer" data-meta="Natureza">
+        <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=700&auto=format&fit=crop" alt="Montanhas ao Entardecer" />
+        <div class="card-overlay">
+          <div class="card-title">Montanhas ao Entardecer</div>
+          <div class="card-meta">Natureza</div>
+        </div>
+      </div>
+
+      <div class="photo-card" data-index="6" data-title="Rua à Noite" data-meta="Urbano">
+        <img src="https://images.unsplash.com/photo-1444723121867-7a241cacace9?w=700&auto=format&fit=crop" alt="Rua à Noite" />
+        <div class="card-overlay">
+          <div class="card-title">Rua à Noite</div>
+          <div class="card-meta">Urbano</div>
+        </div>
+      </div>
+
+      <div class="photo-card" data-index="7" data-title="Leveza" data-meta="Retrato">
+        <img src="https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?w=700&auto=format&fit=crop" alt="Leveza" />
+        <div class="card-overlay">
+          <div class="card-title">Leveza</div>
+          <div class="card-meta">Retrato</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <div class="lightbox-inner">
+      <button class="lb-close" id="lb-close">✕</button>
+      <button class="lb-nav prev" id="lb-prev">&#8592;</button>
+      <button class="lb-nav next" id="lb-next">&#8594;</button>
+      <img id="lb-img" src="" alt="" />
+      <div class="lb-caption">
+        <div class="lb-title" id="lb-title"></div>
+        <div class="lb-meta" id="lb-meta"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <span>© 2024 Galeria de Fotos</span>
+    <span>Fotos via <a href="https://unsplash.com" target="_blank">Unsplash</a></span>
+  </footer>
+
+  <script>
+    const cards = document.querySelectorAll('.photo-card');
+    const lightbox = document.getElementById('lightbox');
+    const lbImg = document.getElementById('lb-img');
+    const lbTitle = document.getElementById('lb-title');
+    const lbMeta = document.getElementById('lb-meta');
+    let current = 0;
+
+    const photos = Array.from(cards).map(c => ({
+      src: c.querySelector('img').src,
+      title: c.dataset.title,
+      meta: c.dataset.meta,
+    }));
+
+    function openLightbox(index) {
+      current = index;
+      lbImg.src = photos[current].src;
+      lbTitle.textContent = photos[current].title;
+      lbMeta.textContent = photos[current].meta;
+      lightbox.classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      lightbox.classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function navigate(dir) {
+      current = (current + dir + photos.length) % photos.length;
+      lbImg.src = photos[current].src;
+      lbTitle.textContent = photos[current].title;
+      lbMeta.textContent = photos[current].meta;
+    }
+
+    cards.forEach(card => {
+      card.addEventListener('click', () => openLightbox(+card.dataset.index));
+    });
+
+    document.getElementById('lb-close').addEventListener('click', closeLightbox);
+    document.getElementById('lb-prev').addEventListener('click', () => navigate(-1));
+    document.getElementById('lb-next').addEventListener('click', () => navigate(1));
+
+    lightbox.addEventListener('click', e => {
+      if (e.target === lightbox) closeLightbox();
+    });
+
+    document.addEventListener('keydown', e => {
+      if (!lightbox.classList.contains('open')) return;
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowLeft') navigate(-1);
+      if (e.key === 'ArrowRight') navigate(1);
+    });
+
+    // Filter tags
+    const tags = document.querySelectorAll('.tag');
+    tags.forEach(tag => {
+      tag.addEventListener('click', () => {
+        tags.forEach(t => t.classList.remove('active'));
+        tag.classList.add('active');
+        const filter = tag.textContent.trim();
+        cards.forEach(card => {
+          const match = filter === 'Todas' || card.dataset.meta === filter;
+          card.style.display = match ? 'block' : 'none';
+        });
+      });
+    });
+  </script>
+
+</body>
+</html>
